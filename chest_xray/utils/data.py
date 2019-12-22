@@ -83,9 +83,15 @@ def get_random_dataset(dataset, batch_size=128, parse_fn=parse_fn):
         numpy_image = numpy_image.reshape(256, 256, 3)
         modified_image = datagen.random_transform(numpy_image)
         return modified_image, y
+    
+    def set_shapes(img, label):
+        img.set_shape((256, 256, 3))
+        label.set_shape((1, ))
+        return img, label
 
-    dataset = dataset.map(lambda x, y: tf.py_function(map_fn, (x, y,), Tout=(tf.float32, tf.int64)),
-                           num_parallel_calls=multiprocessing.cpu_count())
+    dataset = dataset.map(lambda x, y: tf.py_function(map_fn, (x, y,), Tout=(tf.float32, tf.int64)), 
+                          num_parallel_calls=multiprocessing.cpu_count())
+    dataset = dataset.map(set_shapes)
     dataset = dataset.repeat()
     dataset = dataset.shuffle(buffer_size=512)
     dataset = dataset.batch(batch_size, drop_remainder=True)
