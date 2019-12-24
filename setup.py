@@ -24,7 +24,7 @@ def check_nvidia():
 
 requirements = [
     'numpy==1.16.1',
-    'tensorflow-gpu==1.13.1' if check_nvidia() else 'tensorflow==1.13.1',
+    'tensorflow-gpu==2.0.0' if check_nvidia() else 'tensorflow==2.0.0',
     'pandas==0.25.3',
     'matplotlib==3.1.2',
     'pyspark==2.4.0',

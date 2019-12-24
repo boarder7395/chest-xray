@@ -4,40 +4,12 @@ import multiprocessing
 from tensorflow.keras.preprocessing.image import ImageDataGenerator
 
 
-def parse_fn_random(proto):
-    key_mapping = {
-        'image': tf.io.FixedLenFeature([], tf.string),
-        'label': tf.io.FixedLenFeature([], tf.int64)
-    }
-    features = tf.parse_single_example(proto, key_mapping)
-    
-    # parse image
-    image = features['image']
-    image = tf.io.decode_raw(image, tf.float32)
-    image = tf.reshape(image, (1, 256, 256, 3))
-    image = image / 256
-    
-    # rotate images randomly
-    random_angles = tf.random.uniform(shape = (tf.shape(image)[0], ), 
-                                  minval = -0.3,
-                                  maxval = 0.3)
-
-    rotated_images = tf.contrib.image.transform(
-        image,
-        tf.contrib.image.angles_to_projective_transforms(
-            random_angles, 
-            tf.cast(tf.shape(image)[1], tf.float32), 
-            tf.cast(tf.shape(image)[2], tf.float32),
-        )
-    )
-    return tf.reshape(rotated_images, (256, 256, 3)), features['label']
-
 def parse_fn(proto):
     key_mapping = {
         'image': tf.io.FixedLenFeature([], tf.string),
         'label': tf.io.FixedLenFeature([], tf.int64)
     }
-    features = tf.parse_single_example(proto, key_mapping)
+    features = tf.io.parse_single_example(proto, key_mapping)
     
     # parse image
     image = features['image']
@@ -85,16 +57,16 @@ def get_random_dataset(dataset, batch_size=128, parse_fn=parse_fn):
         return modified_image, y
     
     def set_shapes(img, label):
-        img.set_shape((256, 256, 3))
-        label.set_shape((1, ))
+        img.set_shape((batch_size, 256, 256, 3))
+        label.set_shape((batch_size, ))
         return img, label
 
     dataset = dataset.map(lambda x, y: tf.py_function(map_fn, (x, y,), Tout=(tf.float32, tf.int64)), 
                           num_parallel_calls=multiprocessing.cpu_count())
-    dataset = dataset.map(set_shapes)
     dataset = dataset.repeat()
     dataset = dataset.shuffle(buffer_size=512)
     dataset = dataset.batch(batch_size, drop_remainder=True)
+    dataset = dataset.map(set_shapes)
     dataset = dataset.prefetch(512)
     return dataset
     
